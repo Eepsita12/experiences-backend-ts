@@ -212,64 +212,66 @@ router.get('/',(req:Request,res:Response)=>{
     })
 })
 
-router.post('/:id/book',requireAuth,requireRole('user'),(req:Request,res:Response)=>{
-    const experienceId = req.params.id
-    const userId = req.user!.userId
+router.post('/:id/book', requireAuth, requireRole('user'), (req, res) => {
+  const experienceId = Number(req.params.id);
+  const userId = req.user!.userId;
+  const seats = Number(req.body?.seats ?? 1);
 
-    db.get(`SELECT id, status FROM experiences WHERE id = ?`,
-        [experienceId],
-        (err,experience:{id: number,status: string} | undefined)=> {
-            if (err) {
-                return res.status(500).json({
-                    error:{
-                        code: 'SERVER_ERROR',
-                        message: 'Database error',
-                        details: []
-                    }
-                })
+
+
+  if (!Number.isInteger(seats) || seats < 1) {
+    return res.status(400).json({
+      error: { 
+        code: 'VALIDATION_ERROR', 
+        message: 'seats must be >= 1', 
+        details: [] }
+    });
+  }
+
+  db.get(
+    `SELECT id, status FROM experiences WHERE id = ?`,
+    [experienceId],
+    (err, experience: { id: number; status: string } | undefined) => {
+      if (err) {
+        return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Database error', details: [] } });
+      }
+
+      if (!experience) {
+        return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Experience not found', details: [] } });
+      }
+
+      if (experience.status !== 'published') {
+        return res.status(400).json({
+          error: { code: 'INVALID_STATUS', message: 'Experience is not available for booking', details: [] }
+        });
+      }
+
+      db.run(
+        `INSERT INTO bookings (user_id, experience_id, seats) VALUES (?, ?, ?)`,
+        [userId, experienceId, seats],
+        function (bookingErr: any) {
+          if (bookingErr) {
+        
+            if (bookingErr.code === 'SQLITE_CONSTRAINT' && String(bookingErr.message).includes('UNIQUE')) {
+              return res.status(400).json({
+                error: { code: 'ALREADY_BOOKED', message: 'You have already booked this experience', details: [] }
+              });
             }
 
-            if(!experience) {
-                return res.status(404).json({
-                    error:{
-                        code: 'NOT_FOUND',
-                        message: 'Experience not found',
-                        details: []
-                    }
-                })
-            }
+            return res.status(400).json({
+              error: { code: 'BOOKING_FAILED', message: bookingErr.message ?? 'Booking failed', details: [] }
+            });
+          }
 
-            if(experience.status !== 'published') {
-                return res.status(400).json({
-                    error:{
-                        code: 'INVALID_STATUS',
-                        message: 'Experience is not available for booking',
-                        details: []
-                    }
-                })
-            }
+          return res.status(201).json({
+            message: 'Experience booked successfully',
+            booking: { id: this.lastID, experienceId, userId, seats }
+          });
+        }
+      );
+    }
+  );
+});
 
-            db.run(`INSERT INTO bookings (user_id, experience_id) VALUES (?, ?)`,[userId,experienceId],function(bookingErr){
-                if(bookingErr){
-                    return res.status(400).json({
-                        error:{
-                            code: 'ALREADY_BOOKED',
-                            message: 'You have already booked this experience',
-                            details: []
-                        }
-                    })
-                }
-
-                return res.status(201).json({
-                    message: 'Experience booked successfully',
-                    booking: {
-                        id: this.lastID,
-                        experienceId,
-                        userId
-                    }
-                })
-            })
-        })
-})
 
 export default router

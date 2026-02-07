@@ -4,8 +4,6 @@ import path from 'path'
 console.log('Initializing database...')
 
 const dbPath = path.join(__dirname, '../../database.sqlite')
-console.log('🧠 SQLite DB PATH:', dbPath)
-
 
 export const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
@@ -50,7 +48,7 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       experience_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
-      seats INTEGER CHECK(seats >= 1) NOT NULL,
+      seats INTEGER CHECK(seats >= 1) NOT NULL DEFAULT 1,
       status TEXT CHECK(status IN ('confirmed', 'cancelled')) DEFAULT 'confirmed',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (experience_id) REFERENCES experiences(id),

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import { db } from "../db"
 import sqlite3 from "sqlite3"
 import jwt from 'jsonwebtoken'
+import { validateSignup } from "../validators/auth.validator"
 
 const router = Router()
 
@@ -16,6 +17,16 @@ type UserRow = {
 
 //signup
 router.post('/signup', async (req: Request, res: Response) => {
+    const error = validateSignup(req.body)
+    if (error) {
+    return res.status(400).json({
+        error: {
+        code: 'VALIDATION_ERROR',
+        message: error,
+        details: []
+        }
+    })
+    }
     const { email, password, role } = req.body
 
 
