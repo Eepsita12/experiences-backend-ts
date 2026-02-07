@@ -198,6 +198,29 @@ Duplicate bookings are prevented.
 
 ---
 
+---
+
+## Validation & Error Handling
+
+- Request bodies are validated using hand-written validators
+- Invalid requests return **400 Bad Request**
+- Unauthenticated requests return **401 Unauthorized**
+- Unauthorized role access returns **403 Forbidden**
+- Missing resources return **404 Not Found**
+
+---
+
+## Observability
+
+- Request logging middleware logs:
+  - HTTP method
+  - Request path
+  - Response status
+  - Request latency
+- `/health` endpoint verifies server and database connectivity
+
+---
+
 ## Notes
 
 * SQLite database file is generated locally and not committed
